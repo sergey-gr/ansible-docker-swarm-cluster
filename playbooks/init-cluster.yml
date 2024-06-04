@@ -1,0 +1,7 @@
+---
+- name: Docker Swarm
+  hosts: swarm
+  become: true
+  roles:
+    - { role: cluster, tags: cluster }
+    - { role: postreq/share, tags: share, when: share_enable | bool }

@@ -1,0 +1,68 @@
+---
+- include_tasks: debian.yml
+  when: ansible_os_family == 'Debian'
+
+- include_tasks: rhel.yml
+  when: ansible_os_family in ['RedHat', 'Rocky']
+
+- name: Getting latest installed docker-compose version
+  ansible.builtin.shell: "{{ docker_binary_path }}/docker-compose version | grep -oE '[.0-9]+'"
+  register: current_version
+  ignore_errors: true
+
+- set_fact:
+    installed_version: "{{ current_version.stdout }}"
+
+- debug:
+    var: installed_version
+
+- name: Getting latest available docker-compose version without proxy
+  shell: "curl -sN https://api.github.com/repos/docker/compose/tags | grep -oP '\"name\": *\"v\\K[^\"]*' | head -1"
+  when: http_proxy is not defined and https_proxy is not defined
+  register: latest_version_no_proxy
+
+- name: Getting latest available docker-compose version with proxy
+  shell: "curl -sN https://api.github.com/repos/docker/compose/tags | grep -oP '\"name\": *\"v\\K[^\"]*' | head -1"
+  environment:
+    http_proxy: "{{ http_proxy|default(omit) }}"
+    https_proxy: "{{ https_proxy|default(omit) }}"
+  when: http_proxy is defined and https_proxy is defined
+  register: latest_version_with_proxy
+
+- set_fact:
+    latest_version: "{{ latest_version_no_proxy.stdout if http_proxy is not defined and https_proxy is not defined else latest_version_with_proxy.stdout }}"
+
+- debug:
+    var: latest_version
+
+- name: Compare installed and latest docker-compose versions
+  ansible.builtin.set_fact:
+    upgrade_required: "{{ 'True' if latest_version is version(installed_version, '>', version_type='semver') else 'False' }}"
+
+- debug:
+    var: upgrade_required
+
+- name: Downloading latest docker-compose binary without proxy
+  shell: "curl -SL {{ docker_compose_binary_url }} -o {{ docker_binary_path }}/docker-compose"
+  when: upgrade_required and (http_proxy is not defined and https_proxy is not defined)
+  register: upgraded_without_proxy
+
+- name: Downloading latest docker-compose binary with proxy
+  shell: "curl -SL {{ docker_compose_binary_url }} -o {{ docker_binary_path }}/docker-compose"
+  environment:
+    http_proxy: "{{ http_proxy|default(omit) }}"
+    https_proxy: "{{ https_proxy|default(omit) }}"
+  when: upgrade_required and (http_proxy is defined and https_proxy is defined)
+  register: upgraded_with_proxy
+
+- set_fact:
+    upgrade: "{{ 'True' if upgraded_without_proxy.changed or upgraded_with_proxy.changed else 'False' }}"
+
+- debug:
+    var: upgrade
+
+- name: Make docker-compose binary executable
+  file:
+    dest: "{{ docker_binary_path }}/docker-compose"
+    mode: +x
+  when: upgrade == 'True'

@@ -1,0 +1,4 @@
+.DS_Store
+inventory/*
+!inventory/default
+*.log

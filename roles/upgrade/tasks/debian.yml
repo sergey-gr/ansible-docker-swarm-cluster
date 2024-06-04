@@ -1,0 +1,28 @@
+---
+- name: Allow packages to be upgraded
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: install
+  with_items:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+  register: allow_upgrade
+
+- name: Install new packages
+  apt:
+    name:
+      - "{{ docker_packages[ansible_distribution]['docker-ce'] }}"
+      - "{{ docker_packages[ansible_distribution]['docker-ce-cli'] }}"
+      - "{{ docker_packages[ansible_distribution]['containerd.io'] }}"
+    update_cache: yes
+  when: allow_upgrade.changed
+
+- name: Hold packages
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  with_items:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io

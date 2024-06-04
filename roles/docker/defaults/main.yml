@@ -1,0 +1,62 @@
+---
+# Docker daemon.json configuration
+# Path: roles/docker/defaults/main.yml
+
+# Repository configuration
+docker_repository:
+  Ubuntu:
+    '20':
+      repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable'
+      key_id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+      key_url: https://download.docker.com/linux/ubuntu/gpg
+    '22':
+      repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable'
+      key_id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+      key_url: https://download.docker.com/linux/ubuntu/gpg
+  RedHat:
+    '7':
+      baseurl: https://download.docker.com/linux/centos/7/$basearch/stable
+      gpgkey: https://download.docker.com/linux/centos/gpg
+    '8':
+      baseurl: https://download.docker.com/linux/centos/8/$basearch/stable
+      gpgkey: https://download.docker.com/linux/centos/gpg
+    '9':
+      baseurl: https://download.docker.com/linux/centos/9/$basearch/stable
+      gpgkey: https://download.docker.com/linux/centos/gpg
+  Rocky:
+    '8':
+      baseurl: https://download.docker.com/linux/centos/8/$basearch/stable
+      gpgkey: https://download.docker.com/linux/centos/gpg
+    '9':
+      baseurl: https://download.docker.com/linux/centos/9/$basearch/stable
+      gpgkey: https://download.docker.com/linux/centos/gpg
+
+# Package configuration
+docker_packages:
+  RedHat:
+    'docker-ce': 'docker-ce-{{ docker_version }}'
+    'docker-ce-cli': 'docker-ce-cli-{{ docker_version }}'
+    'containerd.io': 'containerd.io'
+    'version_lock': 'yum-plugin-versionlock'
+  Rocky:
+    'docker-ce': 'docker-ce-{{ docker_version }}'
+    'docker-ce-cli': 'docker-ce-cli-{{ docker_version }}'
+    'containerd.io': 'containerd.io'
+    'version_lock': 'python3-dnf-plugin-versionlock'
+  Ubuntu:
+    'docker-ce': 'docker-ce=5:{{ docker_version }}*'
+    'docker-ce-cli': 'docker-ce-cli=5:{{ docker_version }}*'
+    'containerd.io': 'containerd.io'
+
+# Storage under which docker will create its own datasets.
+docker_local_storage: /srv/docker
+
+# The maximum size of the log before it is rolled.
+docker_log_max_size: 100m
+
+# Network bridge IP.
+docker_network_bip: 10.250.1.1/24
+
+# Docker compose.
+docker_compose_binary_url: "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)"
+docker_binary_path: /usr/local/bin

@@ -1,0 +1,9 @@
+---
+- name: Upgrade docker version
+  hosts: swarm
+  gather_facts: true
+  become: true
+  vars_files:
+      - ../roles/docker/defaults/main.yml
+  roles:
+    - { role: upgrade }

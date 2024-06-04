@@ -1,0 +1,14 @@
+---
+- name: Management deployments
+  hosts: manager[0]
+  become: true
+  roles:
+    - { role: stacks/mgmt, tags: mgmt }
+
+- name: Log rotate
+  hosts: manager
+  become: true
+  vars_files:
+    - roles/docker/defaults/main.yml
+  roles:
+    - { role: postreq/logortate, tags: logortate }

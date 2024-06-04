@@ -1,0 +1,83 @@
+---
+- name: Stopping Docker service
+  systemd:
+    name: docker
+    state: stopped
+    enabled: no
+  ignore_errors: true
+
+- name: Un-hold packages (Debian)
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: purge
+  with_items:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  when: ansible_os_family == 'Debian'
+  ignore_errors: True
+
+- name: Un-hold packages (RedHat 7)
+  community.general.yum_versionlock:
+    state: absent
+    name:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+  when: ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'
+  ignore_errors: True
+
+- name: Un-hold packages (RedHat or Rocky 8+)
+  community.general.dnf_versionlock:
+    state: absent
+    name:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+  when: ansible_os_family in ['RedHat', 'Rocky'] and ansible_distribution_major_version >= '8'
+  ignore_errors: True
+
+- name: Remove docker related packages
+  package:
+    name:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    state: absent
+  register: remove_docker_packages
+
+- name: Remove repository public key (Debian)
+  apt_key:
+    id: "{{ docker_repository[ansible_distribution][ansible_distribution_major_version].key_id }}"
+    url: "{{ docker_repository[ansible_distribution][ansible_distribution_major_version].key_url }}"
+    state: absent
+  when: ansible_os_family == 'Debian'
+
+- name: Remove repository (Debian)
+  apt_repository:
+    repo: "{{ docker_repository[ansible_distribution][ansible_distribution_major_version].repo }}"
+    filename: docker
+    state: absent
+  when: ansible_os_family == 'Debian'
+
+- name: Remove repository (RedHat or Rocky)
+  yum_repository:
+    name: docker
+    state: absent
+  when: ansible_os_family in ['RedHat', 'Rocky']
+
+- name: Remove Docker related directories
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - '/etc/docker'
+    - '/etc/systemd/system/docker.service.d/'
+    - '{{ docker_local_storage }}'
+    - '{{ mgmt_stacks.dir }}'
+    - '/etc/logrotate.d/traefik'
+
+- name: Reboot a machine
+  reboot:
+    reboot_timeout: 600
+  when: remove_docker_packages.changed
